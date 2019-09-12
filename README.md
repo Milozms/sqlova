@@ -44,6 +44,44 @@
     - `conda install tqdm`
 - The code has been tested on Tesla M40 GPU running on Ubuntu 16.04.4 LTS.
 
+#### Load pre-trained SQLova parameters.
+- Pretrained SQLova model parameters are uploaded in [release](https://github.com/naver/sqlova/releases). To start from this, uncomment line 562-565 and set paths.
+
+  
+#### Code base 
+- Pretrained BERT models were downloaded from [official repository](https://github.com/google-research/bert). 
+- BERT code is from [huggingface-pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT).
+- The sequence-to-SQL model is started from the source code of [SQLNet](https://github.com/xiaojunxu/SQLNet) and significantly re-written while maintaining the basic column-attention and sequence-to-set structure of the SQLNet.
+
+#### Data
+- The data is annotated by using `annotate_ws.py` which is based on [`annotate.py`](https://github.com/salesforce/WikiSQL) from WikiSQL repository. The tokens of natural language guery, and the start and end indices of where-conditions on natural language tokens are annotated.
+- Pre-trained BERT parameters can be downloaded from BERT [official repository](https://github.com/google-research/bert) and can be coverted to `pt`file using following script. You need install both pytorch and tensorflow and change `BERT_BASE_DIR` to your data directory.
+
+```sh
+    cd sqlova
+    export BERT_BASE_DIR=data/uncased_L-12_H-768_A-12
+    python bert/convert_tf_checkpoint_to_pytorch.py \
+        --tf_checkpoint_path $BERT_BASE_DIR/bert_model.ckpt \
+        --bert_config_file    $BERT_BASE_DIR/bert_config.json \
+        --pytorch_dump_path     $BERT_BASE_DIR/pytorch_model.bin 
+```
+
+- `bert/convert_tf_checkpoint_to_pytorch.py` is from the previous version of [huggingface-pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT), and current version of `pytorch-pretrained-BERT` is not compatible with the bert model used in this repo due to the difference in variable names (in LayerNorm). See [this](https://github.com/naver/sqlova/issues/1) for the detail.
+- For the convenience, the annotated WikiSQL data and the PyTorch-converted pre-trained BERT parameters are available at [here](https://drive.google.com/file/d/1iJvsf38f16el58H4NPINQ7uzal5-V4v4/view?usp=sharing).
+
+
+#### Preparation
+- Download [WikiSQL dataset](https://github.com/salesforce/WikiSQL), and put the WikiSQL directory in `./data`.
+- Unzip:
+    - `cd ./data/WikiSQL`
+    - `unzip data.tar.bz2`
+- Annotate
+    - `python annootate_ws.py`
+- Copy 
+    - `cp ./data/WikiSQL/data/* ./data/wikisql_tok`
+    - Copy and rename converted bert files to `./data/wikisql_tok`
+    
+
 #### Running code
 - Type `python3 train.py --seed 1 --bS 16 --accumulate_gradients 2 --bert_type_abb uS --fine_tune --lr 0.001 --lr_bert 0.00001 --max_seq_leng 222` on terminal.
     - `--seed 1`: Set the seed of random generator. The accuracies changes by few percent depending on `seed`.
@@ -76,30 +114,6 @@
 - Save the output of `test(...)` with `save_for_evaluation(...)` function.
 - Evaluate with `evaluatoin_ws.py` as before.
 
-#### Load pre-trained SQLova parameters.
-- Pretrained SQLova model parameters are uploaded in [release](https://github.com/naver/sqlova/releases). To start from this, uncomment line 562-565 and set paths.
-
-  
-#### Code base 
-- Pretrained BERT models were downloaded from [official repository](https://github.com/google-research/bert). 
-- BERT code is from [huggingface-pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT).
-- The sequence-to-SQL model is started from the source code of [SQLNet](https://github.com/xiaojunxu/SQLNet) and significantly re-written while maintaining the basic column-attention and sequence-to-set structure of the SQLNet.
-
-#### Data
-- The data is annotated by using `annotate_ws.py` which is based on [`annotate.py`](https://github.com/salesforce/WikiSQL) from WikiSQL repository. The tokens of natural language guery, and the start and end indices of where-conditions on natural language tokens are annotated.
-- Pre-trained BERT parameters can be downloaded from BERT [official repository](https://github.com/google-research/bert) and can be coverted to `pt`file using following script. You need install both pytorch and tensorflow and change `BERT_BASE_DIR` to your data directory.
-
-```sh
-    cd sqlova
-    export BERT_BASE_DIR=data/uncased_L-12_H-768_A-12
-    python bert/convert_tf_checkpoint_to_pytorch.py \
-        --tf_checkpoint_path $BERT_BASE_DIR/bert_model.ckpt \
-        --bert_config_file    $BERT_BASE_DIR/bert_config.json \
-        --pytorch_dump_path     $BERT_BASE_DIR/pytorch_model.bin 
-```
-
-- `bert/convert_tf_checkpoint_to_pytorch.py` is from the previous version of [huggingface-pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT), and current version of `pytorch-pretrained-BERT` is not compatible with the bert model used in this repo due to the difference in variable names (in LayerNorm). See [this](https://github.com/naver/sqlova/issues/1) for the detail.
-- For the convenience, the annotated WikiSQL data and the PyTorch-converted pre-trained BERT parameters are available at [here](https://drive.google.com/file/d/1iJvsf38f16el58H4NPINQ7uzal5-V4v4/view?usp=sharing).
 
 ### License
 ```
