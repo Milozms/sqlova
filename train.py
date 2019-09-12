@@ -556,7 +556,7 @@ if __name__ == '__main__':
     args = construct_hyper_param(parser)
 
     ## 2. Paths
-    path_h = '/home/wonseok'
+    path_h = './'
     path_wikisql = os.path.join(path_h, 'data', 'wikisql_tok')
     BERT_PT_PATH = path_wikisql
 
