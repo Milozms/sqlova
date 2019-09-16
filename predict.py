@@ -91,12 +91,14 @@ def predict(data_loader, data_table, model, model_bert, bert_config, tokenizer,
 
 ## Set up hyper parameters and paths
 parser = argparse.ArgumentParser()
-parser.add_argument("--model_file", required=True, help='model file to use (e.g. model_best.pt)')
-parser.add_argument("--bert_model_file", required=True, help='bert model file to use (e.g. model_bert_best.pt)')
-parser.add_argument("--bert_path", required=True, help='path to bert files (bert_config*.json etc)')
-parser.add_argument("--data_path", required=True, help='path to *.jsonl and *.db files')
-parser.add_argument("--split", required=True, help='prefix of jsonl and db files (e.g. dev)')
-parser.add_argument("--result_path", required=True, help='directory in which to place results')
+parser.add_argument("--model_file", default='./saved/model_best.pt', help='model file to use (e.g. model_best.pt)')
+parser.add_argument("--bert_model_file", default='./saved/model_bert_best.pt', help='bert model file to use (e.g. model_bert_best.pt)')
+parser.add_argument("--bert_path", default='./data/wikisql_tok', help='path to bert files (bert_config*.json etc)')
+parser.add_argument("--data_path", default='./data/wikisql_tok', help='path to *.jsonl and *.db files')
+parser.add_argument("--split", default='test', help='prefix of jsonl and db files (e.g. dev)')
+parser.add_argument("--result_path", default='./saved', help='directory in which to place results')
+parser.add_argument("--no-eg", dest='EG', action='store_false', help='directory in which to place results')
+parser.set_defaults(EG=True)
 args = construct_hyper_param(parser)
 
 BERT_PT_PATH = args.bert_path
