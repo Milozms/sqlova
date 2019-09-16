@@ -19,6 +19,15 @@ from sqlova.utils.utils_wikisql import *
 
 class Seq2SQL_v1(nn.Module):
     def __init__(self, iS, hS, lS, dr, n_cond_ops, n_agg_ops, old=False):
+        '''
+        :param iS: Seq-to-SQL input vector dimenstion (bert_config.hidden_size * args.num_target_layers)
+        :param hS: The dimension of hidden vector in the seq-to-SQL module.
+        :param lS: The number of LSTM layers
+        :param dr: Dropout rate
+        :param n_cond_ops:
+        :param n_agg_ops:
+        :param old: default False
+        '''
         super(Seq2SQL_v1, self).__init__()
         self.iS = iS
         self.hS = hS
@@ -41,6 +50,20 @@ class Seq2SQL_v1(nn.Module):
                 g_sc=None, g_sa=None, g_wn=None, g_wc=None, g_wo=None, g_wvi=None,
                 show_p_sc=False, show_p_sa=False,
                 show_p_wn=False, show_p_wc=False, show_p_wo=False, show_p_wv=False):
+        '''
+        :param wemb_n: natural language embedding
+        :param l_n: token lengths of each question
+        :param wemb_hpu: header embedding
+        :param l_hpu: header token lengths
+        :param l_hs: the number of columns (headers) of the tables.
+        :param g_sc: select column
+        :param g_sa: select aggregator
+        :param g_wn: number of conditions
+        :param g_wc: condition column
+        :param g_wo: condition operator
+        :param g_wvi: condition value. ground truth where-value index under CoreNLP tokenization scheme
+        :return:
+        '''
 
         # sc
         s_sc = self.scp(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, show_p_sc=show_p_sc)
@@ -280,6 +303,9 @@ class Seq2SQL_v1(nn.Module):
         return prob_sca, prob_w, prob_wn_w, pr_sc_best, pr_sa_best, pr_wn_based_on_prob, pr_sql_i
 
 class SCP(nn.Module):
+    '''
+    Select column
+    '''
     def __init__(self, iS=300, hS=100, lS=2, dr=0.3):
         super(SCP, self).__init__()
         self.iS = iS
@@ -346,7 +372,6 @@ class SCP(nn.Module):
             show()
 
 
-
         #   p_n [ bS, mL_hs, mL_n]  -> [ bS, mL_hs, mL_n, 1]
         #   wenc_n [ bS, mL_n, 100] -> [ bS, 1, mL_n, 100]
         #   -> [bS, mL_hs, mL_n, 100] -> [bS, mL_hs, 100]
@@ -365,6 +390,9 @@ class SCP(nn.Module):
 
 
 class SAP(nn.Module):
+    '''
+    Select aggregator. Takes the output of Select Column as input.
+    '''
     def __init__(self, iS=300, hS=100, lS=2, dr=0.3, n_agg_ops=-1, old=False):
         super(SAP, self).__init__()
         self.iS = iS
@@ -440,6 +468,9 @@ class SAP(nn.Module):
 
 
 class WNP(nn.Module):
+    '''
+    Number of where conditions
+    '''
     def __init__(self, iS=300, hS=100, lS=2, dr=0.3, ):
         super(WNP, self).__init__()
         self.iS = iS
@@ -549,6 +580,9 @@ class WNP(nn.Module):
         return s_wn
 
 class WCP(nn.Module):
+    '''
+    Condition column
+    '''
     def __init__(self, iS=300, hS=100, lS=2, dr=0.3):
         super(WCP, self).__init__()
         self.iS = iS
@@ -634,6 +668,9 @@ class WCP(nn.Module):
 
 
 class WOP(nn.Module):
+    '''
+    Condition operator. Takes the outputs of select condition number and condition column as inputs
+    '''
     def __init__(self, iS=300, hS=100, lS=2, dr=0.3, n_cond_ops=3):
         super(WOP, self).__init__()
         self.iS = iS
@@ -738,6 +775,7 @@ class WOP(nn.Module):
 
 class WVP_se(nn.Module):
     """
+    Takes the outputs of select condition number, condition column and condition operator as inputs
     Discriminative model
     Get start and end.
     Here, classifier for [ [투수], [팀1], [팀2], [연도], ...]
