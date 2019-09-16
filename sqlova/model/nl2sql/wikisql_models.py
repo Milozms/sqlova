@@ -120,7 +120,7 @@ class Seq2SQL_v1(nn.Module):
         Execution-guided beam decoding.
         """
         # sc
-        s_sc = self.scp(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, show_p_sc=show_p_sc)
+        s_sc = self.scp(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, show_p_sc=show_p_sc)   # [batch_size, max_header_number]
         prob_sc = F.softmax(s_sc, dim=-1)
         bS, mcL = s_sc.shape
 
@@ -609,28 +609,40 @@ class WCP(nn.Module):
         self.softmax_dim2 = nn.Softmax(dim=2)
 
     def forward(self, wemb_n, l_n, wemb_hpu, l_hpu, l_hs, show_p_wc, penalty=True):
+        # wemb_n: natural language embedding
+        # wemb_h: header embedding
+        # l_n: token lengths of each question
+        # l_hpu: header token lengths
+        # l_hs: the number of columns (headers) of the tables.
+
+        # wemb_n: [32,31,1536]
+        # l_n: 32
+        # wemb_hpu: [213,12,1536]
+        # l_hpu: 213
+        # l_hs: 32  # sum(l_hs)=213
+
         # Encode
         wenc_n = encode(self.enc_n, wemb_n, l_n,
                         return_hidden=False,
                         hc0=None,
-                        last_only=False)  # [b, n, dim]
+                        last_only=False)  # [b, n, dim] [32,31,100]
 
-        wenc_hs = encode_hpu(self.enc_h, wemb_hpu, l_hpu, l_hs)  # [b, hs, dim]
+        wenc_hs = encode_hpu(self.enc_h, wemb_hpu, l_hpu, l_hs)  # [b, hs, dim] [32,17,100]
 
         # attention
         # wenc = [bS, mL, hS]
         # att = [bS, mL_hs, mL_n]
         # att[b, i_h, j_n] = p(j_n| i_h)
-        att = torch.bmm(wenc_hs, self.W_att(wenc_n).transpose(1, 2))
+        att = torch.bmm(wenc_hs, self.W_att(wenc_n).transpose(1, 2))  # [32,17,31]
 
         # penalty to blank part.
-        mL_n = max(l_n)
+        mL_n = max(l_n)  # 31
         for b_n, l_n1 in enumerate(l_n):
             if l_n1 < mL_n:
                 att[b_n, :, l_n1:] = -10000000000
 
         # make p(j_n | i_h)
-        p = self.softmax_dim2(att)
+        p = self.softmax_dim2(att)  # [32,17,31]
 
         if show_p_wc:
             # p = [b, hs, n]
