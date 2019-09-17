@@ -1782,27 +1782,28 @@ def get_masks_for_SAP(tb, pr_sc):
         masks[b, :] = mask1
     return masks
 
-def get_masks_for_WOP(tb, pr_wc, n_cond_ops=4):
+def get_masks_for_WOP(tb, pr_wc, max_wn=4, n_cond_ops=4):
     '''
     Get mask vectors for cond_col and cond_op in where clause
     cond_ops = ['=', '>', '<', 'OP']  # do not know why 'OP' required.
     '''
     B = len(pr_wc)
     n_valid_cond_ops = 3
-    masks = torch.zeros(B, n_cond_ops)
-    for b, pr_sc1 in enumerate(pr_wc):
-        hd_types1 = tb[b]['types']
-        hd_types11 = hd_types1[pr_sc1]
-        if hd_types11 == 'text':
-            mask1 = torch.zeros(n_cond_ops)
-            mask1[0] = 1.0
-            # [1.0, 0.0, 0.0, 0.0]
-        elif hd_types11 == 'real':
-            mask1 = torch.ones(n_cond_ops)  # [1.0, 1.0, 1.0, 0.0]
-        else:
-            raise Exception("New TYPE!!")
-        mask1[:, n_valid_cond_ops:] = 0.0
-        masks[b, :] = mask1
+    masks = torch.zeros(B, max_wn, n_cond_ops)
+    for b, pr_wc1 in enumerate(pr_wc):
+        for wc_idx, pr_wc11 in enumerate(pr_wc1):
+            hd_types1 = tb[b]['types']
+            hd_types11 = hd_types1[pr_wc11]
+            if hd_types11 == 'text':
+                mask1 = torch.zeros(n_cond_ops)
+                mask1[0] = 1.0
+                # [1.0, 0.0, 0.0, 0.0]
+            elif hd_types11 == 'real':
+                mask1 = torch.ones(n_cond_ops)  # [1.0, 1.0, 1.0, 0.0]
+            else:
+                raise Exception("New TYPE!!")
+            mask1[n_valid_cond_ops:] = 0.0
+            masks[b, wc_idx, :] = mask1
     return masks
 
 

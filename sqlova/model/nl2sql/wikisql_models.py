@@ -476,7 +476,7 @@ class SAP(nn.Module):
         if constraint:
             assert tb is not None
             pr_sc_masks = 1 - get_masks_for_SAP(tb, pr_sc)
-            s_sa.masked_fill(mask=pr_sc_masks.byte(), value=-np.inf)
+            s_sa.masked_fill_(mask=pr_sc_masks.byte(), value=-np.inf)
 
         return s_sa
 
@@ -797,12 +797,12 @@ class WOP(nn.Module):
         # [bS, 5-1, dim] -> [bS, 5-1, 3]
 
         vec = torch.cat([self.W_c(c_n), self.W_hs(wenc_hs_ob)], dim=2)
-        s_wo = self.wo_out(vec)
+        s_wo = self.wo_out(vec)   # [B, max_wn, n_cond_op]  # [32, 4, 4]
 
         if constraint:
             assert tb is not None
             pr_wc_masks = 1 - get_masks_for_WOP(tb, wc, self.n_cond_ops)
-            s_wo.masked_fill(mask=pr_wc_masks.byte(), value=-np.inf)
+            s_wo.masked_fill_(mask=pr_wc_masks.byte(), value=-np.inf)
 
         return s_wo
 
