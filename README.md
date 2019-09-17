@@ -83,7 +83,7 @@
     
 
 #### Running code
-- Type `python3 train.py --seed 1 --bS 16 --accumulate_gradients 2 --bert_type_abb uS --fine_tune --lr 0.001 --lr_bert 0.00001 --max_seq_leng 222` on terminal.
+- Type `python3 train.py --seed 1 --bS 8 --accumulate_gradients 4 --bert_type_abb uS --fine_tune --lr 0.001 --lr_bert 0.00001 --max_seq_leng 222` on terminal.
     - `--seed 1`: Set the seed of random generator. The accuracies changes by few percent depending on `seed`.
     - `--bS 16`: Set the batch size by 16.
     - `--accumulate_gradients 2`: Make the effective batch size be `16 * 2 = 32`.
