@@ -23,17 +23,18 @@ def ensure_dir(my_path):
 
 
 def topk_multi_dim(tensor, n_topk=1, batch_exist=True):
-
     if batch_exist:
+        # tensor: [bS, beam_size, n_agg_ops]
         idxs = []
-        for b, tensor1 in enumerate(tensor):
+        for b, tensor1 in enumerate(tensor):      # [beam_size, n_agg_ops]
             idxs1 = []
-            tensor1_1d = tensor1.reshape(-1)
+            tensor1_1d = tensor1.reshape(-1)     # [beam_size * n_agg_ops]
             values_1d, idxs_1d = tensor1_1d.topk(k=n_topk)
             idxs_list = unravel_index(idxs_1d.cpu().numpy(), tensor1.shape)
+            # get the index (index of sel_col in beam, index of agg_op) of top_k elements (separately)
             # (dim0, dim1, dim2, ...)
 
-            # reconstruct
+            # reconstruct: [[sc_idx_1, ag_idx_1], ..., [sc_idx_k, ag_idx_k]]
             for i_beam in range(n_topk):
                 idxs11 = []
                 for idxs_list1 in idxs_list:

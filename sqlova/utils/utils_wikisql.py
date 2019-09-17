@@ -946,16 +946,18 @@ def pred_wc_old(sql_i, s_wc):
 
 def pred_wc(wn, s_wc):
     """
+    wn: [self.max_wn]*bS
+    s_wc: # [batch, max_header_number] output of self.wcp
     return: [ pr_wc1_i, pr_wc2_i, ...]
     ! Returned index is sorted!
     """
     # get g_num
     pr_wc = []
     for b, wn1 in enumerate(wn):
-        s_wc1 = s_wc[b]
+        s_wc1 = s_wc[b]  # score for headers in each instance
 
-        pr_wc1 = argsort(-s_wc1.data.cpu().numpy())[:wn1]
-        pr_wc1.sort()
+        pr_wc1 = argsort(-s_wc1.data.cpu().numpy())[:wn1]    # indices of top_k
+        pr_wc1.sort()   # ranked top_k indices
 
         pr_wc.append(list(pr_wc1))
     return pr_wc

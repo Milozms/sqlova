@@ -137,13 +137,13 @@ class Seq2SQL_v1(nn.Module):
 
         # calculate and predict s_sa.
         for i_beam in range(beam_size):
-            pr_sc = list( array(pr_sc_beam)[:,i_beam] )
+            pr_sc = list( array(pr_sc_beam)[:,i_beam] )  # index of ith best sel_col
             s_sa = self.sap(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, pr_sc, show_p_sa=show_p_sa)
-            prob_sa = F.softmax(s_sa, dim=-1)
-            prob_sc_sa[:, i_beam, :] = prob_sa
+            prob_sa = F.softmax(s_sa, dim=-1)    # [batch, n_agg_ops]
+            prob_sc_sa[:, i_beam, :] = prob_sa   # agg_op scores for ith best sel_col
 
-            prob_sc_selected = prob_sc[range(bS), pr_sc] # [B]
-            prob_sca[:,i_beam,:] =  (prob_sa.t() * prob_sc_selected).t()
+            prob_sc_selected = prob_sc[range(bS), pr_sc] # [B]   # sel_col scores of ith best sel_col
+            prob_sca[:,i_beam,:] =  (prob_sa.t() * prob_sc_selected).t()  # joint score of agg_op and sel_col
             # [mcL, B] * [B] -> [mcL, B] (element-wise multiplication)
             # [mcL, B] -> [B, mcL]
 
@@ -154,7 +154,7 @@ class Seq2SQL_v1(nn.Module):
         idxs = topk_multi_dim(torch.tensor(prob_sca), n_topk=beam_size, batch_exist=True)
         # Now as sc_idx is already sorted, re-map them properly.
 
-        idxs = remap_sc_idx(idxs, pr_sc_beam) # [sc_beam_idx, sa_idx] -> [sc_idx, sa_idx]
+        idxs = remap_sc_idx(idxs, pr_sc_beam)  # [batch, beam_size, 2]  # length[(sc_beam_idx, sa_idx)] -> [(sc_idx, sa_idx)]
         idxs_arr = array(idxs)
         # [B, beam_size, remainig dim]
         # idxs[b][0] gives first probable [sc_idx, sa_idx] pairs.
@@ -197,16 +197,18 @@ class Seq2SQL_v1(nn.Module):
 
         # Found "executable" most likely 4(=max_num_of_conditions) where-clauses.
         # wc
-        s_wc = self.wcp(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, show_p_wc=show_p_wc, penalty=True)
+        s_wc = self.wcp(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, show_p_wc=show_p_wc, penalty=True)  # [batch, max_header_number]
         prob_wc = F.sigmoid(s_wc).detach().to('cpu').numpy()
         # pr_wc_sorted_by_prob = pred_wc_sorted_by_prob(s_wc)
 
         # get max_wn # of most probable columns & their prob.
         pr_wn_max = [self.max_wn]*bS
-        pr_wc_max = pred_wc(pr_wn_max, s_wc) # if some column do not have executable where-claouse, omit that column
+        pr_wc_max = pred_wc(pr_wn_max, s_wc)  # indices of top_k headers (k==4 initially)
+        # if some column do not have executable where-clause, omit that column (?)
         prob_wc_max = zeros([bS, self.max_wn])
         for b, pr_wc_max1 in enumerate(pr_wc_max):
             prob_wc_max[b,:] = prob_wc[b,pr_wc_max1]
+        # prob_wc_max: scores for top_k headers
 
         # get most probable max_wn where-clouses
         # wo
@@ -217,16 +219,18 @@ class Seq2SQL_v1(nn.Module):
         pr_wvi_beam_op_list = []
         prob_wvi_beam_op_list = []
         for i_op  in range(self.n_cond_ops-1):
+            # get where-value for each cond_col and each cond_op
             pr_wo_temp = [ [i_op]*self.max_wn ]*bS
             # wv
             s_wv = self.wvp(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, wn=pr_wn_max, wc=pr_wc_max, wo=pr_wo_temp, show_p_wv=show_p_wv)
-            prob_wv = F.softmax(s_wv, dim=-2).detach().to('cpu').numpy()
+            prob_wv = F.softmax(s_wv, dim=-2).detach().to('cpu').numpy()    # [bS, max_wn=4, max_q_length, 2]
 
             # prob_wv
             pr_wvi_beam, prob_wvi_beam = pred_wvi_se_beam(self.max_wn, s_wv, beam_size)
             pr_wvi_beam_op_list.append(pr_wvi_beam)
             prob_wvi_beam_op_list.append(prob_wvi_beam)
             # pr_wvi_beam = [B, max_wn, k_logit**2 [st, ed] paris]
+            # k_logit = int(ceil(sqrt(beam_size)))
 
             # pred_wv_beam
 
@@ -250,7 +254,7 @@ class Seq2SQL_v1(nn.Module):
         prob_conds_max = []
         # while len(conds_max) < self.max_wn:
         idxs = topk_multi_dim(torch.tensor(prob_w), n_topk=beam_size, batch_exist=True)
-        # idxs = [B, i_wc_beam, i_op, i_wv_pairs]
+        # idxs = [idx_batch, (idx_wc_beam, idx_op, idx_wv_pairs)]
 
         # Construct conds1
         for b, idxs1 in enumerate(idxs):
@@ -844,7 +848,7 @@ class WVP_se(nn.Module):
             wenc_n, hout, cout = encode(self.enc_n, wemb_n, l_n,
                             return_hidden=True,
                             hc0=None,
-                            last_only=False)  # [b, n, dim]
+                            last_only=False)  # [b, max_q_len, dim]
 
         wenc_hs = encode_hpu(self.enc_h, wemb_hpu, l_hpu, l_hs)  # [b, hs, dim]
 
@@ -855,10 +859,11 @@ class WVP_se(nn.Module):
         for b in range(bS):
             # [[...], [...]]
             # Pad list to maximum number of selections
-            real = [wenc_hs[b, col] for col in wc[b]]
+            real = [wenc_hs[b, col] for col in wc[b]]   # [wc_beam_size=4, dim]
             pad = (self.mL_w - wn[b]) * [wenc_hs[b, 0]]  # this padding could be wrong. Test with zero padding later.
-            wenc_hs_ob1 = torch.stack(real + pad)  # It is not used in the loss function.
+            wenc_hs_ob1 = torch.stack(real + pad)  # It is not used in the loss function.  [wc_beam_size=4, dim]
             wenc_hs_ob.append(wenc_hs_ob1)
+        # wenc_hs_ob: [batch, wc_beam_size=4, dim]  encoding vector for top-k headers
 
         # list to [B, 4, dim] tensor.
         wenc_hs_ob = torch.stack(wenc_hs_ob)  # list to tensor.
