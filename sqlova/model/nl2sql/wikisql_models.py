@@ -49,7 +49,8 @@ class Seq2SQL_v1(nn.Module):
     def forward(self, wemb_n, l_n, wemb_hpu, l_hpu, l_hs,
                 g_sc=None, g_sa=None, g_wn=None, g_wc=None, g_wo=None, g_wvi=None,
                 show_p_sc=False, show_p_sa=False,
-                show_p_wn=False, show_p_wc=False, show_p_wo=False, show_p_wv=False):
+                show_p_wn=False, show_p_wc=False, show_p_wo=False, show_p_wv=False,
+                constraint=False, tb=None):
         '''
         :param wemb_n: natural language embedding
         :param l_n: token lengths of each question
@@ -64,17 +65,19 @@ class Seq2SQL_v1(nn.Module):
         :param g_wvi: condition value. ground truth where-value index under CoreNLP tokenization scheme
         :return:
         '''
+        if constraint:
+            assert tb is not None
 
         # sc
         s_sc = self.scp(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, show_p_sc=show_p_sc)
 
         if g_sc:
-            pr_sc = g_sc
+            pr_sc = g_sc  # [batch_size]
         else:
             pr_sc = pred_sc(s_sc)
 
         # sa
-        s_sa = self.sap(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, pr_sc, show_p_sa=show_p_sa)
+        s_sa = self.sap(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, pr_sc, show_p_sa=show_p_sa, constraint=True, tb=tb)
         if g_sa:
             # it's not necessary though.
             pr_sa = g_sa
@@ -86,7 +89,7 @@ class Seq2SQL_v1(nn.Module):
         s_wn = self.wnp(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, show_p_wn=show_p_wn)
 
         if g_wn:
-            pr_wn = g_wn
+            pr_wn = g_wn    # [batch_size]
         else:
             pr_wn = pred_wn(s_wn)
 
@@ -94,12 +97,13 @@ class Seq2SQL_v1(nn.Module):
         s_wc = self.wcp(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, show_p_wc=show_p_wc, penalty=True)
 
         if g_wc:
-            pr_wc = g_wc
+            pr_wc = g_wc     # [batch_size]
         else:
             pr_wc = pred_wc(pr_wn, s_wc)
 
         # wo
-        s_wo = self.wop(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, wn=pr_wn, wc=pr_wc, show_p_wo=show_p_wo)
+        s_wo = self.wop(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, wn=pr_wn, wc=pr_wc, show_p_wo=show_p_wo,
+                        constraint=True, tb=tb)
 
         if g_wo:
             pr_wo = g_wo
@@ -426,7 +430,7 @@ class SAP(nn.Module):
             self.W_c = nn.Linear(hS, hS)
             self.W_hs = nn.Linear(hS, hS)
 
-    def forward(self, wemb_n, l_n, wemb_hpu, l_hpu, l_hs, pr_sc, show_p_sa=False):
+    def forward(self, wemb_n, l_n, wemb_hpu, l_hpu, l_hs, pr_sc, show_p_sa=False, constraint=False, tb=None):
         # Encode
         wenc_n = encode(self.enc_n, wemb_n, l_n,
                         return_hidden=False,
@@ -434,6 +438,7 @@ class SAP(nn.Module):
                         last_only=False)  # [b, n, dim]
 
         wenc_hs = encode_hpu(self.enc_h, wemb_hpu, l_hpu, l_hs)  # [b, hs, dim]
+
 
         bS = len(l_hs)
         mL_n = max(l_n)
@@ -467,6 +472,11 @@ class SAP(nn.Module):
         #       -> [bS, mL_n, 100] -> [bS, 100]
         c_n = torch.mul(wenc_n, p.unsqueeze(2).expand_as(wenc_n)).sum(dim=1)
         s_sa = self.sa_out(c_n)
+
+        if constraint:
+            assert tb is not None
+            pr_sc_masks = 1 - get_masks_for_SAP(tb, pr_sc)
+            s_sa.masked_fill(mask=pr_sc_masks.byte(), value=-np.inf)
 
         return s_sa
 
@@ -693,6 +703,7 @@ class WOP(nn.Module):
         self.hS = hS
         self.lS = lS
         self.dr = dr
+        self.n_cond_ops = n_cond_ops
 
         self.mL_w = 4 # max where condition number
 
@@ -716,7 +727,8 @@ class WOP(nn.Module):
         self.softmax_dim1 = nn.Softmax(dim=1)
         self.softmax_dim2 = nn.Softmax(dim=2)
 
-    def forward(self, wemb_n, l_n, wemb_hpu, l_hpu, l_hs, wn, wc, wenc_n=None, show_p_wo=False):
+    def forward(self, wemb_n, l_n, wemb_hpu, l_hpu, l_hs, wn, wc, wenc_n=None, show_p_wo=False,
+                constraint=False, tb=None):
         # Encode
         if not wenc_n:
             wenc_n = encode(self.enc_n, wemb_n, l_n,
@@ -786,6 +798,11 @@ class WOP(nn.Module):
 
         vec = torch.cat([self.W_c(c_n), self.W_hs(wenc_hs_ob)], dim=2)
         s_wo = self.wo_out(vec)
+
+        if constraint:
+            assert tb is not None
+            pr_wc_masks = 1 - get_masks_for_WOP(tb, wc, self.n_cond_ops)
+            s_wo.masked_fill(mask=pr_wc_masks.byte(), value=-np.inf)
 
         return s_wo
 

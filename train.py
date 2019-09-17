@@ -67,6 +67,7 @@ def construct_hyper_param(parser):
                         default=False,
                         action='store_true',
                         help="If present, Execution guided decoding is used in test.")
+    parser.set_defaults(constraint=True)
     parser.add_argument('--beam_size',
                         type=int,
                         default=4,
@@ -197,7 +198,7 @@ def get_data(path_wikisql, args):
 
 def train(train_loader, train_table, model, model_bert, opt, bert_config, tokenizer,
           max_seq_length, num_target_layers, accumulate_gradients=1, check_grad=True,
-          st_pos=0, opt_bert=None, path_db=None, dset_name='train'):
+          st_pos=0, opt_bert=None, path_db=None, dset_name='train', constraint=False):
     model.train()
     model_bert.train()
 
@@ -255,8 +256,12 @@ def train(train_loader, train_table, model, model_bert, opt, bert_config, tokeni
             # e.g. train: 32.
             continue
 
-        # score
-        s_sc, s_sa, s_wn, s_wc, s_wo, s_wv = model(wemb_n, l_n, wemb_h, l_hpu, l_hs,
+        if constraint:
+            s_sc, s_sa, s_wn, s_wc, s_wo, s_wv = model(wemb_n, l_n, wemb_h, l_hpu, l_hs,
+                                                       g_sc=g_sc, g_sa=g_sa, g_wn=g_wn, g_wc=g_wc, g_wvi=g_wvi,
+                                                       constraint=constraint, tb=tb)
+        else:
+            s_sc, s_sa, s_wn, s_wc, s_wo, s_wv = model(wemb_n, l_n, wemb_h, l_hpu, l_hs,
                                                    g_sc=g_sc, g_sa=g_sa, g_wn=g_wn, g_wc=g_wc, g_wvi=g_wvi)
 
         # Calculate loss & step
@@ -602,7 +607,8 @@ if __name__ == '__main__':
                                          opt_bert=opt_bert,
                                          st_pos=0,
                                          path_db=path_wikisql,
-                                         dset_name='train')
+                                         dset_name='train',
+                                         constraint=args.constraint)
 
         # check DEV
         with torch.no_grad():

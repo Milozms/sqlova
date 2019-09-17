@@ -427,6 +427,7 @@ def generate_w2i_wemb_table(tables, wv, idx_w2i, n_total, w2i, wemb):
                 #         idx_w2i, n_total = update_w2i_wemb(token_spl1, wv, idx_w2i, n_total, w2i, wemb)
 
     return idx_w2i, n_total
+
 def generate_w2i_wemb(train_data, wv, idx_w2i, n_total, w2i, wemb):
     """ Generate subset of GloVe
         update_w2i_wemb. It uses wv, w2i, wemb, idx_w2i as global variables.
@@ -1757,6 +1758,52 @@ def check_sc_sa_pairs(tb, pr_sc, pr_sa, ):
             raise Exception("New TYPE!!")
 
     return check
+
+def get_masks_for_SAP(tb, pr_sc):
+    '''
+    Get mask vectors for select_col and sel_agg_op
+    agg_ops = ['', 'MAX', 'MIN', 'COUNT', 'SUM', 'AVG']
+    '''
+    B = len(pr_sc)
+    n_agg_ops = 6
+    masks = torch.zeros(B, n_agg_ops)
+    for b, pr_sc1 in enumerate(pr_sc):
+        hd_types1 = tb[b]['types']
+        hd_types11 = hd_types1[pr_sc1]
+        if hd_types11 == 'text':
+            mask1 = torch.zeros(n_agg_ops)
+            mask1[0] = 1.0
+            mask1[3] = 1.0
+            # [1.0, 0.0, 0.0, 1.0, 0.0, 0.0]
+        elif hd_types11 == 'real':
+            mask1 = torch.ones(n_agg_ops)  # [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        else:
+            raise Exception("New TYPE!!")
+        masks[b, :] = mask1
+    return masks
+
+def get_masks_for_WOP(tb, pr_wc, n_cond_ops=4):
+    '''
+    Get mask vectors for cond_col and cond_op in where clause
+    cond_ops = ['=', '>', '<', 'OP']  # do not know why 'OP' required.
+    '''
+    B = len(pr_wc)
+    n_valid_cond_ops = 3
+    masks = torch.zeros(B, n_cond_ops)
+    for b, pr_sc1 in enumerate(pr_wc):
+        hd_types1 = tb[b]['types']
+        hd_types11 = hd_types1[pr_sc1]
+        if hd_types11 == 'text':
+            mask1 = torch.zeros(n_cond_ops)
+            mask1[0] = 1.0
+            # [1.0, 0.0, 0.0, 0.0]
+        elif hd_types11 == 'real':
+            mask1 = torch.ones(n_cond_ops)  # [1.0, 1.0, 1.0, 0.0]
+        else:
+            raise Exception("New TYPE!!")
+        mask1[:, n_valid_cond_ops:] = 0.0
+        masks[b, :] = mask1
+    return masks
 
 
 def remap_sc_idx(idxs, pr_sc_beam):
