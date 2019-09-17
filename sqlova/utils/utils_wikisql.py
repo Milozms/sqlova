@@ -1780,7 +1780,7 @@ def get_masks_for_SAP(tb, pr_sc):
         else:
             raise Exception("New TYPE!!")
         masks[b, :] = mask1
-    return masks
+    return masks.to(device)
 
 def get_masks_for_WOP(tb, pr_wc, max_wn=4, n_cond_ops=4):
     '''
@@ -1804,7 +1804,7 @@ def get_masks_for_WOP(tb, pr_wc, max_wn=4, n_cond_ops=4):
                 raise Exception("New TYPE!!")
             mask1[n_valid_cond_ops:] = 0.0
             masks[b, wc_idx, :] = mask1
-    return masks
+    return masks.to(device)
 
 
 def remap_sc_idx(idxs, pr_sc_beam):
