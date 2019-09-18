@@ -159,6 +159,10 @@ def get_models(args, BERT_PT_PATH, trained=False, path_model_bert=None, path_mod
     print(f"learning rate: {args.lr_bert}")
     print(f"Fine-tune BERT: {args.fine_tune}")
 
+    print(f"Use constraints: {args.constraint}")
+    print(f"Execution guided decoding:: {args.EG}")
+
+
     # Get BERT
     model_bert, tokenizer, bert_config = get_bert(BERT_PT_PATH, args.bert_type, args.do_lower_case,
                                                   args.no_pretraining)
