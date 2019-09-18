@@ -347,7 +347,7 @@ def train(train_loader, train_table, model, model_bert, opt, bert_config, tokeni
         cnt_lx += sum(cnt_lx1_list)
         cnt_x += sum(cnt_x1_list)
 
-        myprint('Current epoch: processed %d batches' % iB, end='',flush=True)
+        myprint('Current epoch: processed %d batches' % iB, end='\r',flush=True)
 
     myprint('')
 
