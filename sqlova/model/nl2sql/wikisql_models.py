@@ -50,7 +50,7 @@ class Seq2SQL_v1(nn.Module):
                 g_sc=None, g_sa=None, g_wn=None, g_wc=None, g_wo=None, g_wvi=None,
                 show_p_sc=False, show_p_sa=False,
                 show_p_wn=False, show_p_wc=False, show_p_wo=False, show_p_wv=False,
-                constraint=False, tb=None):
+                constraint=True, tb=None):
         '''
         :param wemb_n: natural language embedding
         :param l_n: token lengths of each question
@@ -66,6 +66,7 @@ class Seq2SQL_v1(nn.Module):
         :return:
         '''
         if constraint:
+            # print('Calling forward function. Using constraints.')
             assert tb is not None
 
         # sc
@@ -77,7 +78,7 @@ class Seq2SQL_v1(nn.Module):
             pr_sc = pred_sc(s_sc)
 
         # sa
-        s_sa = self.sap(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, pr_sc, show_p_sa=show_p_sa, constraint=True, tb=tb)
+        s_sa = self.sap(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, pr_sc, show_p_sa=show_p_sa, constraint=constraint, tb=tb)
         if g_sa:
             # it's not necessary though.
             pr_sa = g_sa
@@ -103,7 +104,7 @@ class Seq2SQL_v1(nn.Module):
 
         # wo
         s_wo = self.wop(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, wn=pr_wn, wc=pr_wc, show_p_wo=show_p_wo,
-                        constraint=True, tb=tb)
+                        constraint=constraint, tb=tb)
 
         if g_wo:
             pr_wo = g_wo
@@ -119,10 +120,15 @@ class Seq2SQL_v1(nn.Module):
                      nlu_t, nlu_wp_t, wp_to_wh_index, nlu,
                      beam_size=4,
                      show_p_sc=False, show_p_sa=False,
-                     show_p_wn=False, show_p_wc=False, show_p_wo=False, show_p_wv=False):
+                     show_p_wn=False, show_p_wc=False, show_p_wo=False, show_p_wv=False,
+                     constraint=True):
         """
         Execution-guided beam decoding.
         """
+        if constraint:
+            # print('Calling beam_forward function. Using constraints.')
+            assert tb is not None
+
         # sc
         s_sc = self.scp(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, show_p_sc=show_p_sc)   # [batch_size, max_header_number]
         prob_sc = F.softmax(s_sc, dim=-1)
@@ -142,7 +148,7 @@ class Seq2SQL_v1(nn.Module):
         # calculate and predict s_sa.
         for i_beam in range(beam_size):
             pr_sc = list( array(pr_sc_beam)[:,i_beam] )  # index of ith best sel_col
-            s_sa = self.sap(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, pr_sc, show_p_sa=show_p_sa)
+            s_sa = self.sap(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, pr_sc, show_p_sa=show_p_sa, constraint=constraint, tb=tb)
             prob_sa = F.softmax(s_sa, dim=-1)    # [batch, n_agg_ops]
             prob_sc_sa[:, i_beam, :] = prob_sa   # agg_op scores for ith best sel_col
 
@@ -216,7 +222,8 @@ class Seq2SQL_v1(nn.Module):
 
         # get most probable max_wn where-clouses
         # wo
-        s_wo_max = self.wop(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, wn=pr_wn_max, wc=pr_wc_max, show_p_wo=show_p_wo)
+        s_wo_max = self.wop(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, wn=pr_wn_max, wc=pr_wc_max, show_p_wo=show_p_wo,
+                            constraint=True, tb=tb)
         prob_wo_max = F.softmax(s_wo_max, dim=-1).detach().to('cpu').numpy()
         # [B, max_wn, n_cond_op]
 

@@ -198,7 +198,7 @@ def get_data(path_wikisql, args):
 
 def train(train_loader, train_table, model, model_bert, opt, bert_config, tokenizer,
           max_seq_length, num_target_layers, accumulate_gradients=1, check_grad=True,
-          st_pos=0, opt_bert=None, path_db=None, dset_name='train', constraint=False):
+          st_pos=0, opt_bert=None, path_db=None, dset_name='train', constraint=True):
     model.train()
     model_bert.train()
 
@@ -393,7 +393,7 @@ def report_detail(hds, nlu,
 def test(data_loader, data_table, model, model_bert, bert_config, tokenizer,
          max_seq_length,
          num_target_layers, detail=False, st_pos=0, cnt_tot=1, EG=False, beam_size=4,
-         path_db=None, dset_name='test'):
+         path_db=None, dset_name='test', constraint=True):
     model.eval()
     model_bert.eval()
 
@@ -448,7 +448,7 @@ def test(data_loader, data_table, model, model_bert, bert_config, tokenizer,
         # score
         if not EG:
             # No Execution guided decoding
-            s_sc, s_sa, s_wn, s_wc, s_wo, s_wv = model(wemb_n, l_n, wemb_h, l_hpu, l_hs)
+            s_sc, s_sa, s_wn, s_wc, s_wo, s_wv = model(wemb_n, l_n, wemb_h, l_hpu, l_hs, constraint=constraint, tb=tb)
 
             # get loss & step
             loss = Loss_sw_se(s_sc, s_sa, s_wn, s_wc, s_wo, s_wv, g_sc, g_sa, g_wn, g_wc, g_wo, g_wvi)
@@ -464,6 +464,7 @@ def test(data_loader, data_table, model, model_bert, bert_config, tokenizer,
                                                                                             l_hs, engine, tb,
                                                                                             nlu_t, nlu_tt,
                                                                                             tt_to_t_idx, nlu,
+                                                                                            constraint=constraint,
                                                                                             beam_size=beam_size)
             # sort and generate
             pr_wc, pr_wo, pr_wv, pr_sql_i = sort_and_generate_pr_w(pr_sql_i)
@@ -623,7 +624,8 @@ if __name__ == '__main__':
                                                 detail=False,
                                                 path_db=path_wikisql,
                                                 st_pos=0,
-                                                dset_name='dev', EG=args.EG)
+                                                dset_name='dev', EG=args.EG,
+                                                constraint=args.constraint)
 
 
         print_result(epoch, acc_train, 'train')
