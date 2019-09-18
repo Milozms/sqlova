@@ -68,6 +68,10 @@ def construct_hyper_param(parser):
                         action='store_true',
                         help="If present, Execution guided decoding is used in test.")
     parser.set_defaults(constraint=True)
+    parser.add_argument('--no-constr',
+                        dest='constraint',
+                        action='store_false',
+                        help="If present, Execution guided decoding is used in test.")
     parser.add_argument('--beam_size',
                         type=int,
                         default=4,
