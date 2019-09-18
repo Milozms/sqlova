@@ -42,7 +42,7 @@ from train import construct_hyper_param, get_models
 def predict(data_loader, data_table, model, model_bert, bert_config, tokenizer,
             max_seq_length,
             num_target_layers, detail=False, st_pos=0, cnt_tot=1, EG=False, beam_size=4,
-            path_db=None, dset_name='test'):
+            path_db=None, dset_name='test', constraint=True):
 
     model.eval()
     model_bert.eval()
@@ -59,7 +59,7 @@ def predict(data_loader, data_table, model, model_bert, bert_config, tokenizer,
                             num_out_layers_n=num_target_layers, num_out_layers_h=num_target_layers)
         if not EG:
             # No Execution guided decoding
-            s_sc, s_sa, s_wn, s_wc, s_wo, s_wv = model(wemb_n, l_n, wemb_h, l_hpu, l_hs)
+            s_sc, s_sa, s_wn, s_wc, s_wo, s_wv = model(wemb_n, l_n, wemb_h, l_hpu, l_hs, constraint=constraint, tb=tb)
             pr_sc, pr_sa, pr_wn, pr_wc, pr_wo, pr_wvi = pred_sw_se(s_sc, s_sa, s_wn, s_wc, s_wo, s_wv, )
             pr_wv_str, pr_wv_str_wp = convert_pr_wvi_to_string(pr_wvi, nlu_t, nlu_tt, tt_to_t_idx, nlu)
             pr_sql_i = generate_sql_i(pr_sc, pr_sa, pr_wn, pr_wc, pr_wo, pr_wv_str, nlu)
@@ -69,7 +69,8 @@ def predict(data_loader, data_table, model, model_bert, bert_config, tokenizer,
                                                                                             l_hs, engine, tb,
                                                                                             nlu_t, nlu_tt,
                                                                                             tt_to_t_idx, nlu,
-                                                                                            beam_size=beam_size)
+                                                                                            beam_size=beam_size,
+                                                                                            constraint=constraint)
             # sort and generate
             pr_wc, pr_wo, pr_wv, pr_sql_i = sort_and_generate_pr_w(pr_sql_i)
             # Following variables are just for consistency with no-EG case.
@@ -98,6 +99,7 @@ parser.add_argument("--data_path", default='./data/wikisql_tok', help='path to *
 parser.add_argument("--split", default='test', help='prefix of jsonl and db files (e.g. dev)')
 parser.add_argument("--result_path", default='./saved', help='directory in which to place results')
 parser.add_argument("--no-eg", dest='EG', action='store_false', help='directory in which to place results')
+parser.set_defaults(constraint=True)
 parser.set_defaults(EG=True)
 args = construct_hyper_param(parser)
 
@@ -133,7 +135,8 @@ with torch.no_grad():
                       detail=False,
                       path_db=args.data_path,
                       st_pos=0,
-                      dset_name=args.split, EG=args.EG)
+                      dset_name=args.split, EG=args.EG,
+                      constraint=args.constraint)
 
 # Save results
 save_for_evaluation(path_save_for_evaluation, results, args.split)
