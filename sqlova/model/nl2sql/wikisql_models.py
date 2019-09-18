@@ -483,7 +483,7 @@ class SAP(nn.Module):
         if constraint:
             assert tb is not None
             pr_sc_masks = 1 - get_masks_for_SAP(tb, pr_sc)
-            s_sa.masked_fill_(mask=pr_sc_masks.byte(), value=-np.inf)
+            s_sa.masked_fill_(mask=pr_sc_masks.bool(), value=-np.inf)
 
         return s_sa
 
@@ -809,7 +809,7 @@ class WOP(nn.Module):
         if constraint:
             assert tb is not None
             pr_wc_masks = 1 - get_masks_for_WOP(tb, wc, self.n_cond_ops)
-            s_wo.masked_fill_(mask=pr_wc_masks.byte(), value=-np.inf)
+            s_wo.masked_fill_(mask=pr_wc_masks.bool(), value=-np.inf)
 
         return s_wo
 
