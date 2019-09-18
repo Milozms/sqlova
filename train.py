@@ -20,6 +20,10 @@ from sqlova.utils.utils_wikisql import *
 from sqlova.model.nl2sql.wikisql_models import *
 from sqlnet.dbengine import DBEngine
 
+import logging
+myprint = print
+print = logging.info
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def construct_hyper_param(parser):
@@ -79,6 +83,9 @@ def construct_hyper_param(parser):
     parser.add_argument('--save_dir',
                         type=str,
                         default='./', help='model save dir.')
+    parser.add_argument('--log_file',
+                        type=str,
+                        default=None, help='log file dir.')
 
     args = parser.parse_args()
 
@@ -340,6 +347,10 @@ def train(train_loader, train_table, model, model_bert, opt, bert_config, tokeni
         cnt_lx += sum(cnt_lx1_list)
         cnt_x += sum(cnt_x1_list)
 
+        myprint('Current epoch: processed %d batches' % iB, end='',flush=True)
+
+    myprint('')
+
     ave_loss /= cnt
     acc_sc = cnt_sc / cnt
     acc_sa = cnt_sa / cnt
@@ -572,6 +583,18 @@ if __name__ == '__main__':
     ## 1. Hyper parameters
     parser = argparse.ArgumentParser()
     args = construct_hyper_param(parser)
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter("%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s")
+    if args.log_file is not None:
+        handler = logging.FileHandler("%s/%s.txt" % (args.log_dir, args.log_file), mode='w')
+        handler.setLevel(logging.INFO)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    console.setFormatter(formatter)
+    logger.addHandler(console)
 
     ## 2. Paths
     path_h = './'
