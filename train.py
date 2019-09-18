@@ -72,6 +72,9 @@ def construct_hyper_param(parser):
                         type=int,
                         default=4,
                         help="The size of beam for smart decoding")
+    parser.add_argument('--save_dir',
+                        type=str,
+                        default='./', help='model save dir.')
 
     args = parser.parse_args()
 
@@ -566,7 +569,7 @@ if __name__ == '__main__':
     path_wikisql = os.path.join(path_h, 'data', 'wikisql_tok')
     BERT_PT_PATH = path_wikisql
 
-    path_save_for_evaluation = './'
+    path_save_for_evaluation = args.save_dir
 
     ## 3. Load data
     train_data, train_table, dev_data, dev_table, train_loader, dev_loader = get_data(path_wikisql, args)
@@ -644,9 +647,9 @@ if __name__ == '__main__':
             epoch_best = epoch
             # save best model
             state = {'model': model.state_dict()}
-            torch.save(state, os.path.join('.', 'model_best.pt') )
+            torch.save(state, os.path.join(args.save_dir, 'model_best.pt') )
 
             state = {'model_bert': model_bert.state_dict()}
-            torch.save(state, os.path.join('.', 'model_bert_best.pt'))
+            torch.save(state, os.path.join(args.save_dir, 'model_bert_best.pt'))
 
         print(f" Best Dev lx acc: {acc_lx_t_best} at epoch: {epoch_best}")
