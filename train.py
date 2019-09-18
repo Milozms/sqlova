@@ -85,7 +85,7 @@ def construct_hyper_param(parser):
                         default='./', help='model save dir.')
     parser.add_argument('--log_file',
                         type=str,
-                        default=None, help='log file dir.')
+                        default=None, help='log file name.')
 
     args = parser.parse_args()
 
@@ -587,7 +587,7 @@ if __name__ == '__main__':
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter("%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s")
     if args.log_file is not None:
-        handler = logging.FileHandler("%s/%s.txt" % (args.log_dir, args.log_file), mode='w')
+        handler = logging.FileHandler("%s/%s.txt" % (args.save_dir, args.log_file), mode='w')
         handler.setLevel(logging.INFO)
         handler.setFormatter(formatter)
         logger.addHandler(handler)
