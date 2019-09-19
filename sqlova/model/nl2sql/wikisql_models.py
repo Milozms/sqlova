@@ -223,7 +223,7 @@ class Seq2SQL_v1(nn.Module):
         # get most probable max_wn where-clouses
         # wo
         s_wo_max = self.wop(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, wn=pr_wn_max, wc=pr_wc_max, show_p_wo=show_p_wo,
-                            constraint=True, tb=tb)
+                            constraint=constraint, tb=tb)
         prob_wo_max = F.softmax(s_wo_max, dim=-1).detach().to('cpu').numpy()
         # [B, max_wn, n_cond_op]
 
