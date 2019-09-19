@@ -159,6 +159,8 @@ def predict(data_loader, data_table, model, model_bert, bert_config, tokenizer,
         #                   g_sc, g_sa, g_wn, g_wc, g_wo, g_wv, g_wv_str, g_sql_q, g_ans,
         #                   pr_sc, pr_sa, pr_wn, pr_wc, pr_wo, pr_wv_str, pr_sql_q, pr_ans,
         #                   cnt_list1, current_cnt)
+        print('Current epoch: processed %d batches' % iB, end='\r', flush=True)
+    print('')
 
     ave_loss /= cnt
     acc_sc = cnt_sc / cnt
