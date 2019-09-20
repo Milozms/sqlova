@@ -86,6 +86,10 @@ def construct_hyper_param(parser):
     parser.add_argument('--log_file',
                         type=str,
                         default=None, help='log file name.')
+    parser.add_argument('--eval_test',
+                        default=False,
+                        action='store_true',
+                        help="If present, Execution guided decoding is used in test.")
 
     args = parser.parse_args()
 
@@ -605,14 +609,14 @@ if __name__ == '__main__':
 
     ## 3. Load data
     train_data, train_table, dev_data, dev_table, train_loader, dev_loader = get_data(path_wikisql, args)
-    # test_data, test_table = load_wikisql_data(path_wikisql, mode='test', toy_model=args.toy_model, toy_size=args.toy_size, no_hs_tok=True)
-    # test_loader = torch.utils.data.DataLoader(
-    #     batch_size=args.bS,
-    #     dataset=test_data,
-    #     shuffle=False,
-    #     num_workers=4,
-    #     collate_fn=lambda x: x  # now dictionary values are not merged!
-    # )
+    test_data, test_table = load_wikisql_data(path_wikisql, mode='test', toy_model=args.toy_model, toy_size=args.toy_size, no_hs_tok=True)
+    test_loader = torch.utils.data.DataLoader(
+        batch_size=args.bS,
+        dataset=test_data,
+        shuffle=False,
+        num_workers=4,
+        collate_fn=lambda x: x  # now dictionary values are not merged!
+    )
     ## 4. Build & Load models
     model, model_bert, tokenizer, bert_config = get_models(args, BERT_PT_PATH)
 
@@ -661,10 +665,26 @@ if __name__ == '__main__':
                                                 st_pos=0,
                                                 dset_name='dev', EG=args.EG,
                                                 constraint=args.constraint)
+            if args.eval_test:
+                acc_test, results_test, cnt_list_test = test(test_loader,
+                                                      test_table,
+                                                      model,
+                                                      model_bert,
+                                                      bert_config,
+                                                      tokenizer,
+                                                      args.max_seq_length,
+                                                      args.num_target_layers,
+                                                      detail=False,
+                                                      path_db=path_wikisql,
+                                                      st_pos=0,
+                                                      dset_name='test', EG=args.EG,
+                                                      constraint=args.constraint)
 
 
         print_result(epoch, acc_train, 'train')
         print_result(epoch, acc_dev, 'dev')
+        if args.eval_test:
+            print_result(epoch, acc_dev, 'test')
 
         # save results for the official evaluation
         save_for_evaluation(path_save_for_evaluation, results_dev, 'dev')
