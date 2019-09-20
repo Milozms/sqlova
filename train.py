@@ -684,7 +684,7 @@ if __name__ == '__main__':
         print_result(epoch, acc_train, 'train')
         print_result(epoch, acc_dev, 'dev')
         if args.eval_test:
-            print_result(epoch, acc_dev, 'test')
+            print_result(epoch, acc_test, 'test')
 
         # save results for the official evaluation
         save_for_evaluation(path_save_for_evaluation, results_dev, 'dev')
