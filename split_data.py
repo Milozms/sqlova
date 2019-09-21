@@ -1,6 +1,9 @@
-import os
+import os, sys
 import json
 import random
+
+if len(sys.argv) > 1:
+    random.seed(int(sys.argv[1]))
 
 ratio = 0.1
 os.system('cp ./data/wikisql_tok/train_tok.jsonl ./data/wikisql_tok/train_tok_full.jsonl')
