@@ -1759,47 +1759,59 @@ def check_sc_sa_pairs(tb, pr_sc, pr_sa, ):
 
     return check
 
-def get_masks_for_SAP(tb, pr_sc):
+def get_mask_with_dropout(dropout=0.0):
+    if abs(dropout) < 1e-3:
+        return 0  # mask
+    rval = rd.uniform(0.0, 1.0)
+    if rval < 0.3:
+        return 1  # no mask, prob=dropout
+    return 0  # mask
+
+def get_masks_for_SAP(tb, pr_sc, dropout=0.0):
     '''
     Get mask vectors for select_col and sel_agg_op
     agg_ops = ['', 'MAX', 'MIN', 'COUNT', 'SUM', 'AVG']
     '''
     B = len(pr_sc)
     n_agg_ops = 6
-    masks = torch.zeros(B, n_agg_ops)
+    masks = torch.zeros(B, n_agg_ops, dtype=torch.uint8)
     for b, pr_sc1 in enumerate(pr_sc):
         hd_types1 = tb[b]['types']
         hd_types11 = hd_types1[pr_sc1]
         if hd_types11 == 'text':
-            mask1 = torch.zeros(n_agg_ops)
-            mask1[0] = 1.0
-            mask1[3] = 1.0
+            # mask1 = torch.zeros(n_agg_ops)
+            mask1 = [get_mask_with_dropout(dropout) for i in range(n_agg_ops)]
+            mask1[0] = 1
+            mask1[3] = 1
+            mask1 = torch.tensor(mask1, dtype=torch.uint8)
             # [1.0, 0.0, 0.0, 1.0, 0.0, 0.0]
         elif hd_types11 == 'real':
-            mask1 = torch.ones(n_agg_ops)  # [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+            mask1 = torch.ones(n_agg_ops, dtype=torch.uint8)  # [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
         else:
             raise Exception("New TYPE!!")
         masks[b, :] = mask1
     return masks.to(device)
 
-def get_masks_for_WOP(tb, pr_wc, max_wn=4, n_cond_ops=4):
+def get_masks_for_WOP(tb, pr_wc, max_wn=4, n_cond_ops=4, dropout=0.0):
     '''
     Get mask vectors for cond_col and cond_op in where clause
     cond_ops = ['=', '>', '<', 'OP']  # do not know why 'OP' required.
     '''
     B = len(pr_wc)
     n_valid_cond_ops = 3
-    masks = torch.zeros(B, max_wn, n_cond_ops)
+    masks = torch.zeros(B, max_wn, n_cond_ops, dtype=torch.uint8)
     for b, pr_wc1 in enumerate(pr_wc):
         for wc_idx, pr_wc11 in enumerate(pr_wc1):
             hd_types1 = tb[b]['types']
             hd_types11 = hd_types1[pr_wc11]
             if hd_types11 == 'text':
-                mask1 = torch.zeros(n_cond_ops)
-                mask1[0] = 1.0
+                # mask1 = torch.zeros(n_cond_ops)
+                mask1 = [get_mask_with_dropout(dropout) for i in range(n_cond_ops)]
+                mask1[0] = 1
+                mask1 = torch.tensor(mask1, dtype=torch.uint8)
                 # [1.0, 0.0, 0.0, 0.0]
             elif hd_types11 == 'real':
-                mask1 = torch.ones(n_cond_ops)  # [1.0, 1.0, 1.0, 0.0]
+                mask1 = torch.ones(n_cond_ops, dtype=torch.uint8)  # [1.0, 1.0, 1.0, 0.0]
             else:
                 raise Exception("New TYPE!!")
             mask1[n_valid_cond_ops:] = 0.0

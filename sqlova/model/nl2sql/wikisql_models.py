@@ -50,7 +50,7 @@ class Seq2SQL_v1(nn.Module):
                 g_sc=None, g_sa=None, g_wn=None, g_wc=None, g_wo=None, g_wvi=None,
                 show_p_sc=False, show_p_sa=False,
                 show_p_wn=False, show_p_wc=False, show_p_wo=False, show_p_wv=False,
-                constraint=True, tb=None):
+                constraint=True, tb=None, mask_dropout=0.0):
         '''
         :param wemb_n: natural language embedding
         :param l_n: token lengths of each question
@@ -78,7 +78,8 @@ class Seq2SQL_v1(nn.Module):
             pr_sc = pred_sc(s_sc)
 
         # sa
-        s_sa = self.sap(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, pr_sc, show_p_sa=show_p_sa, constraint=constraint, tb=tb)
+        s_sa = self.sap(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, pr_sc, show_p_sa=show_p_sa,
+                        constraint=constraint, tb=tb, mask_dropout=mask_dropout)
         if g_sa:
             # it's not necessary though.
             pr_sa = g_sa
@@ -104,7 +105,7 @@ class Seq2SQL_v1(nn.Module):
 
         # wo
         s_wo = self.wop(wemb_n, l_n, wemb_hpu, l_hpu, l_hs, wn=pr_wn, wc=pr_wc, show_p_wo=show_p_wo,
-                        constraint=constraint, tb=tb)
+                        constraint=constraint, tb=tb, mask_dropout=mask_dropout)
 
         if g_wo:
             pr_wo = g_wo
@@ -437,7 +438,8 @@ class SAP(nn.Module):
             self.W_c = nn.Linear(hS, hS)
             self.W_hs = nn.Linear(hS, hS)
 
-    def forward(self, wemb_n, l_n, wemb_hpu, l_hpu, l_hs, pr_sc, show_p_sa=False, constraint=False, tb=None):
+    def forward(self, wemb_n, l_n, wemb_hpu, l_hpu, l_hs, pr_sc, show_p_sa=False,
+                constraint=False, tb=None, mask_dropout=0.0):
         # Encode
         wenc_n = encode(self.enc_n, wemb_n, l_n,
                         return_hidden=False,
@@ -482,7 +484,7 @@ class SAP(nn.Module):
 
         if constraint:
             assert tb is not None
-            pr_sc_masks = 1 - get_masks_for_SAP(tb, pr_sc)
+            pr_sc_masks = 1 - get_masks_for_SAP(tb, pr_sc, dropout=mask_dropout)
             s_sa.masked_fill_(mask=pr_sc_masks.bool(), value=-np.inf)
 
         return s_sa
@@ -735,7 +737,7 @@ class WOP(nn.Module):
         self.softmax_dim2 = nn.Softmax(dim=2)
 
     def forward(self, wemb_n, l_n, wemb_hpu, l_hpu, l_hs, wn, wc, wenc_n=None, show_p_wo=False,
-                constraint=False, tb=None):
+                constraint=False, tb=None, mask_dropout=0.0):
         # Encode
         if not wenc_n:
             wenc_n = encode(self.enc_n, wemb_n, l_n,
@@ -808,7 +810,7 @@ class WOP(nn.Module):
 
         if constraint:
             assert tb is not None
-            pr_wc_masks = 1 - get_masks_for_WOP(tb, wc, self.n_cond_ops)
+            pr_wc_masks = 1 - get_masks_for_WOP(tb, wc, self.n_cond_ops, dropout=mask_dropout)
             s_wo.masked_fill_(mask=pr_wc_masks.bool(), value=-np.inf)
 
         return s_wo

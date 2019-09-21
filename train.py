@@ -63,6 +63,7 @@ def construct_hyper_param(parser):
     # 1.3 Seq-to-SQL module parameters
     parser.add_argument('--lS', default=2, type=int, help="The number of LSTM layers.")
     parser.add_argument('--dr', default=0.3, type=float, help="Dropout rate.")
+    parser.add_argument('--mask_dr', default=0.0, type=float, help="Mask Dropout rate.")
     parser.add_argument('--lr', default=1e-3, type=float, help="Learning rate.")
     parser.add_argument("--hS", default=100, type=int, help="The dimension of hidden vector in the seq-to-SQL module.")
 
@@ -220,7 +221,8 @@ def get_data(path_wikisql, args):
 
 def train(train_loader, train_table, model, model_bert, opt, bert_config, tokenizer,
           max_seq_length, num_target_layers, accumulate_gradients=1, check_grad=True,
-          st_pos=0, opt_bert=None, path_db=None, dset_name='train', constraint=True):
+          st_pos=0, opt_bert=None, path_db=None, dset_name='train', constraint=True,
+          mask_dropout=0.0):
     model.train()
     model_bert.train()
 
@@ -281,7 +283,7 @@ def train(train_loader, train_table, model, model_bert, opt, bert_config, tokeni
         if constraint:
             s_sc, s_sa, s_wn, s_wc, s_wo, s_wv = model(wemb_n, l_n, wemb_h, l_hpu, l_hs,
                                                        g_sc=g_sc, g_sa=g_sa, g_wn=g_wn, g_wc=g_wc, g_wvi=g_wvi,
-                                                       constraint=constraint, tb=tb)
+                                                       constraint=constraint, tb=tb, mask_dropout=mask_dropout)
         else:
             s_sc, s_sa, s_wn, s_wc, s_wo, s_wv = model(wemb_n, l_n, wemb_h, l_hpu, l_hs,
                                                        g_sc=g_sc, g_sa=g_sa, g_wn=g_wn, g_wc=g_wc, g_wvi=g_wvi,
@@ -648,7 +650,8 @@ if __name__ == '__main__':
                                          st_pos=0,
                                          path_db=path_wikisql,
                                          dset_name='train',
-                                         constraint=args.constraint)
+                                         constraint=args.constraint,
+                                         mask_dropout=args.mask_dr)
 
         # check DEV
         with torch.no_grad():
