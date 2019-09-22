@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # FILENAME:  run.sh
 #PBS -l nodes=1:ppn=1:gpus=1
-#PBS -l walltime=24:00:00
 cd /home/maosen/sqlova
 module load anaconda/5.1.0-py36
 mkdir /home/maosen/sqlova/smalls/run-$RID
