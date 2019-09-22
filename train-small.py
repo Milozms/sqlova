@@ -588,6 +588,17 @@ if __name__ == '__main__':
     ## 1. Hyper parameters
     parser = argparse.ArgumentParser()
     args = construct_hyper_param(parser)
+
+
+    ## 2. Paths
+    path_h = './'
+    path_wikisql = './smalls/run-%d/train_tok.jsonl' % args.run_id
+    # os.path.join(path_h, 'data', 'wikisql_tok_%d' % args.run_id)
+    BERT_PT_PATH = os.path.join(path_h, 'data', 'wikisql_tok' % args.run_id)
+    args.save_dir = path_wikisql
+
+    path_save_for_evaluation = args.save_dir
+
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter("%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s")
@@ -604,15 +615,6 @@ if __name__ == '__main__':
     console.setLevel(logging.INFO)
     console.setFormatter(formatter)
     logger.addHandler(console)
-
-    ## 2. Paths
-    path_h = './'
-    path_wikisql = './smalls/run-%d/train_tok.jsonl' % args.run_id
-    # os.path.join(path_h, 'data', 'wikisql_tok_%d' % args.run_id)
-    BERT_PT_PATH = os.path.join(path_h, 'data', 'wikisql_tok' % args.run_id)
-    args.save_dir = path_wikisql
-
-    path_save_for_evaluation = args.save_dir
 
     ## 3. Load data
     train_data, train_table, dev_data, dev_table, train_loader, dev_loader = get_data(path_wikisql, args)
