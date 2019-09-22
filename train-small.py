@@ -606,8 +606,8 @@ if __name__ == '__main__':
     logger.addHandler(console)
 
     ## 2. Paths
-    path_h = '/home/maosen/sqlova'
-    path_wikisql = '/home/maosen/sqlova/smalls/run-%d/train_tok.jsonl' % args.run_id
+    path_h = './'
+    path_wikisql = './smalls/run-%d/train_tok.jsonl' % args.run_id
     # os.path.join(path_h, 'data', 'wikisql_tok_%d' % args.run_id)
     BERT_PT_PATH = os.path.join(path_h, 'data', 'wikisql_tok' % args.run_id)
     args.save_dir = path_wikisql
