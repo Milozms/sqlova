@@ -608,7 +608,7 @@ if __name__ == '__main__':
         handler.setLevel(logging.INFO)
         handler.setFormatter(formatter)
         logger.addHandler(handler)
-        csv_file = open("%s/%s.txt" % (args.save_dir, args.log_file), 'w')
+        csv_file = open("%s/%s.csv" % (args.save_dir, args.log_file), 'w')
         csv_writer = csv.writer(csv_file)
         csv_writer.writerow(['epoch', 'dev', 'test', 'dev-eg', 'test-eg', 'dev-ex', 'test-ex', 'dev-eg-ex', 'test-eg-ex'])
     console = logging.StreamHandler()
@@ -732,8 +732,7 @@ if __name__ == '__main__':
             table_row[6] = acc_dev[-1]
             table_row[7] = acc_test[-1]
             table_row = [str(epoch)] + [f'{val:.4f}' for val in table_row]
-            if csv_writer:
-                csv_writer.writerow(table_row)
+            csv_writer.writerow(table_row)
 
         # save results for the official evaluation
         # save_for_evaluation(path_save_for_evaluation, results_dev, 'dev')
