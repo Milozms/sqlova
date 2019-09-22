@@ -3,7 +3,7 @@
 
 # Wonseok Hwang
 # Sep30, 2018
-import os, sys, argparse, re, json
+import os, sys, argparse, re, json, csv
 
 from matplotlib.pylab import *
 import torch.nn as nn
@@ -27,7 +27,7 @@ print = logging.info
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def construct_hyper_param(parser):
-    parser.add_argument('--tepoch', default=200, type=int)
+    parser.add_argument('--tepoch', default=60, type=int)
     parser.add_argument("--bS", default=8, type=int,
                         help="Batch size")
     parser.add_argument("--accumulate_gradients", default=4, type=int,
@@ -67,10 +67,10 @@ def construct_hyper_param(parser):
     parser.add_argument("--hS", default=100, type=int, help="The dimension of hidden vector in the seq-to-SQL module.")
 
     # 1.4 Execution-guided decoding beam-size. It is used only in test.py
-    parser.add_argument('--EG',
-                        default=False,
-                        action='store_true',
-                        help="If present, Execution guided decoding is used in test.")
+    # parser.add_argument('--EG',
+    #                     default=False,
+    #                     action='store_true',
+    #                     help="If present, Execution guided decoding is used in test.")
     parser.set_defaults(constraint=True)
     parser.add_argument('--no-constr',
                         dest='constraint',
@@ -86,10 +86,11 @@ def construct_hyper_param(parser):
     parser.add_argument('--log_file',
                         type=str,
                         default=None, help='log file name.')
-    parser.add_argument('--eval_test',
-                        default=False,
-                        action='store_true',
-                        help="If present, Execution guided decoding is used in test.")
+    parser.add_argument('--run_id', type=int, default=0, help='run id.')
+    # parser.add_argument('--eval_test',
+    #                     default=False,
+    #                     action='store_true',
+    #                     help="If present, Execution guided decoding is used in test.")
 
     args = parser.parse_args()
 
@@ -590,11 +591,15 @@ if __name__ == '__main__':
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter("%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s")
+    csv_writer = None
     if args.log_file is not None:
         handler = logging.FileHandler("%s/%s.txt" % (args.save_dir, args.log_file), mode='w')
         handler.setLevel(logging.INFO)
         handler.setFormatter(formatter)
         logger.addHandler(handler)
+        csv_file = open("%s/%s.txt" % (args.save_dir, args.log_file), 'w')
+        csv_writer = csv.writer(csv_file)
+        csv_writer.writerow(['epoch', 'dev', 'test', 'dev-eg', 'test-eg', 'dev-ex', 'test-ex', 'dev-eg-ex', 'test-eg-ex'])
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
     console.setFormatter(formatter)
@@ -602,8 +607,10 @@ if __name__ == '__main__':
 
     ## 2. Paths
     path_h = './'
-    path_wikisql = os.path.join(path_h, 'data', 'wikisql_tok')
-    BERT_PT_PATH = path_wikisql
+    path_wikisql = './smalls/run-%d/train_tok.jsonl' % args.run_id
+    # os.path.join(path_h, 'data', 'wikisql_tok_%d' % args.run_id)
+    BERT_PT_PATH = os.path.join(path_h, 'data', 'wikisql_tok' % args.run_id)
+    args.save_dir = path_wikisql
 
     path_save_for_evaluation = args.save_dir
 
@@ -650,8 +657,10 @@ if __name__ == '__main__':
                                          dset_name='train',
                                          constraint=args.constraint)
 
+        table_row = [0.0] * 8
         # check DEV
         with torch.no_grad():
+            print('Results WITHOUT Execution-guidance:')
             acc_dev, results_dev, cnt_list = test(dev_loader,
                                                 dev_table,
                                                 model,
@@ -663,10 +672,9 @@ if __name__ == '__main__':
                                                 detail=False,
                                                 path_db=path_wikisql,
                                                 st_pos=0,
-                                                dset_name='dev', EG=args.EG,
+                                                dset_name='dev', EG=False,
                                                 constraint=args.constraint)
-            if args.eval_test:
-                acc_test, results_test, cnt_list_test = test(test_loader,
+            acc_test, results_test, cnt_list_test = test(test_loader,
                                                       test_table,
                                                       model,
                                                       model_bert,
@@ -677,19 +685,56 @@ if __name__ == '__main__':
                                                       detail=False,
                                                       path_db=path_wikisql,
                                                       st_pos=0,
-                                                      dset_name='test', EG=args.EG,
+                                                      dset_name='test', EG=False,
                                                       constraint=args.constraint)
 
-
-        print_result(epoch, acc_train, 'train')
-        print_result(epoch, acc_dev, 'dev')
-        if args.eval_test:
+            print_result(epoch, acc_dev, 'dev')
             print_result(epoch, acc_test, 'test')
+            table_row[0] = acc_dev[-2]
+            table_row[1] = acc_test[-2]
+            table_row[4] = acc_dev[-1]
+            table_row[5] = acc_test[-1]
+
+            print('Results WITH Execution-guidance:')
+            acc_dev, results_dev, cnt_list = test(dev_loader,
+                                                  dev_table,
+                                                  model,
+                                                  model_bert,
+                                                  bert_config,
+                                                  tokenizer,
+                                                  args.max_seq_length,
+                                                  args.num_target_layers,
+                                                  detail=False,
+                                                  path_db=path_wikisql,
+                                                  st_pos=0,
+                                                  dset_name='dev', EG=True,
+                                                  constraint=args.constraint)
+            acc_test, results_test, cnt_list_test = test(test_loader,
+                                                         test_table,
+                                                         model,
+                                                         model_bert,
+                                                         bert_config,
+                                                         tokenizer,
+                                                         args.max_seq_length,
+                                                         args.num_target_layers,
+                                                         detail=False,
+                                                         path_db=path_wikisql,
+                                                         st_pos=0,
+                                                         dset_name='test', EG=True,
+                                                         constraint=args.constraint)
+
+            print_result(epoch, acc_dev, 'dev')
+            print_result(epoch, acc_test, 'test')
+            table_row[2] = acc_dev[-2]
+            table_row[3] = acc_test[-2]
+            table_row[6] = acc_dev[-1]
+            table_row[7] = acc_test[-1]
+            table_row = [str(epoch)] + [f'{val.4f}' for val in table_row]
+            if csv_writer:
+                csv_writer.writerow(table_row)
 
         # save results for the official evaluation
-        save_for_evaluation(path_save_for_evaluation, results_dev, 'dev')
-
-
+        # save_for_evaluation(path_save_for_evaluation, results_dev, 'dev')
 
         # save best model
         # Based on Dev Set logical accuracy lx

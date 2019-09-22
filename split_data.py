@@ -2,11 +2,14 @@ import os, sys
 import json
 import random
 
-if len(sys.argv) > 1:
+if len(sys.argv) > 2:
     random.seed(int(sys.argv[1]))
+    run_id = int(sys.argv[2])
+else:
+    exit(0)
 
 ratio = 0.1
-os.system('cp ./data/wikisql_tok/train_tok.jsonl ./data/wikisql_tok/train_tok_full.jsonl')
+# os.system('cp ./data/wikisql_tok/train_tok.jsonl ./data/wikisql_tok/train_tok_full.jsonl')
 
 data = []
 with open('./data/wikisql_tok/train_tok_full.jsonl','r') as fin:
@@ -18,6 +21,6 @@ dsize = int(len(data)*ratio)
 random.shuffle(data)
 data = data[:dsize]
 
-with open('./data/wikisql_tok/train_tok.jsonl','w') as fout:
+with open('./smalls/run-%d/train_tok.jsonl' % run_id,'w') as fout:
     for d in data:
         fout.write(json.dumps(d) + '\n')
