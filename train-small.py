@@ -729,7 +729,7 @@ if __name__ == '__main__':
             table_row[3] = acc_test[-2]
             table_row[6] = acc_dev[-1]
             table_row[7] = acc_test[-1]
-            table_row = [str(epoch)] + [f'{val.4f}' for val in table_row]
+            table_row = [str(epoch)] + [f'{val:.4f}' for val in table_row]
             if csv_writer:
                 csv_writer.writerow(table_row)
 
