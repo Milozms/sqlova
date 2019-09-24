@@ -1,6 +1,8 @@
 # Copyright 2019-present NAVER Corp.
 # Apache License v2.0
-# qsub -v RID=1,SEED=4321 -N smallc1 run.sh
+# qsub -l walltime=60:00:00 -lnodes=1:ppn=1:gpus=1 -v RID=1,SEED=4321 -N smallc1 run.sh -q long
+# qsub -l walltime=24:00:00 -lnodes=1:ppn=1:gpus=1 -v RID=1,SEED=4321 -N smallc1 run.sh
+
 # Wonseok Hwang
 # Sep30, 2018
 import os, sys, argparse, re, json, csv
@@ -85,7 +87,7 @@ def construct_hyper_param(parser):
                         default='', help='model save dir.')
     parser.add_argument('--log_file',
                         type=str,
-                        default=None, help='log file name.')
+                        default='log-small-constr', help='log file name.')
     parser.add_argument('--run_id', type=int, default=0, help='run id.')
     # parser.add_argument('--eval_test',
     #                     default=False,
@@ -603,14 +605,15 @@ if __name__ == '__main__':
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter("%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s")
     csv_writer = None
-    if args.log_file is not None:
-        handler = logging.FileHandler("%s/%s.txt" % (args.save_dir, args.log_file), mode='w')
-        handler.setLevel(logging.INFO)
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        csv_file = open("%s/%s.csv" % (args.save_dir, args.log_file), 'w')
-        csv_writer = csv.writer(csv_file)
-        csv_writer.writerow(['epoch', 'dev', 'test', 'dev-eg', 'test-eg', 'dev-ex', 'test-ex', 'dev-eg-ex', 'test-eg-ex'])
+
+    handler = logging.FileHandler("%s/%s.txt" % (args.save_dir, args.log_file), mode='w')
+    handler.setLevel(logging.INFO)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    csv_file = open("%s/%s.csv" % (args.save_dir, args.log_file), 'w')
+    csv_writer = csv.writer(csv_file)
+    csv_writer.writerow(['epoch', 'dev', 'test', 'dev-eg', 'test-eg', 'dev-ex', 'test-ex', 'dev-eg-ex', 'test-eg-ex'])
+
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
     console.setFormatter(formatter)
@@ -751,3 +754,5 @@ if __name__ == '__main__':
             torch.save(state, os.path.join(args.save_dir, 'model_bert_best.pt'))
 
         print(f" Best Dev lx acc: {acc_lx_t_best} at epoch: {epoch_best}")
+
+    csv_file.close()
